@@ -14,7 +14,7 @@ end
 
 
 # Handle GET-request (Show the upload form)
-get "/files/" do
+get "/files/*" do
   return "hello world".to_sha1
   #haml :upload
 end
@@ -38,8 +38,8 @@ post "/files/" do
 end
 
 # Handle OPTIONS-request (Check if file exists)
-options "/files/:filename" do
-  file_name = params["filename"]
+options "/files/*" do
+  file_name = params[:splat].join("").to_s
   path = 'uploads/'+file_name
   response.headers["Test-Path"] = path.to_s
   if File.file?(path)
@@ -50,8 +50,8 @@ options "/files/:filename" do
 end
 
 # Handle PATCH-request (Receive and save the uploaded file)
-patch "/files/:filename" do
-  file_name = params["filename"]
+patch "/files/*" do
+  file_name = params[:splat].join("").to_s
   path = 'uploads/'+file_name
   data_bytes = request.body
   File.open(path, "w") do |f|
@@ -61,8 +61,8 @@ patch "/files/:filename" do
 end
 
 # Handle OPTIONS-request (Check if file exists)
-head "/files/:filename" do
-  file_name = params["filename"]
+head "/files/*" do
+  file_name = params[:splat].join("").to_s
   path = 'uploads/'+file_name
   if File.file?(path)
     response.headers["Offset"] = File.size(path).to_s
