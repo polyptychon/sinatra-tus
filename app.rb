@@ -11,7 +11,6 @@ before do
   response.headers["Access-Control-Expose-Headers"] = "Location, Range, Content-Disposition, Offset"
   response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, Offset, Filepath"
   #response.headers["Content-Type"] = "text/plain; charset=utf-8"
-  puts "Before #{request.path_info}"
 end
 
 
@@ -62,10 +61,11 @@ end
 patch "/files/*" do
   file_name = params[:splat].join("").to_s
   path = 'uploads/'+file_name
-  offset = env['Offset']
+  offset = request.env['HTTP_OFFSET'].to_i
   begin
     f = File.open(path, "r+b")
     f.sync = true
+    puts "offset: #{offset}"
     f.seek(offset) unless offset.nil?
     f.write(request.body.read)
     f.close
