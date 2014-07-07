@@ -2,6 +2,9 @@ GEM
   remote: https://rubygems.org/
   specs:
     colored (1.2)
+    ffi (1.9.3)
+    free_disk_space (1.0.0)
+      sys-filesystem
     gemrat (0.4.6)
       colored (= 1.2)
     haml (4.0.5)
@@ -16,12 +19,15 @@ GEM
       rack (~> 1.4)
       rack-protection (~> 1.4)
       tilt (~> 1.3, >= 1.3.4)
+    sys-filesystem (1.1.2)
+      ffi
     tilt (1.4.1)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  free_disk_space (= 1.0.0)
   gemrat
   haml (~> 4.0.3)
   rickshaw (= 0.0.2)

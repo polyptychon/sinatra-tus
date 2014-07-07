@@ -9,8 +9,9 @@ before do
   response.headers["Access-Control-Allow-Methods"] = "HEAD,GET,PUT,POST,PATCH,DELETE"
   response.headers["Access-Control-Allow-Origin"] = "*"
   response.headers["Access-Control-Expose-Headers"] = "Location, Range, Content-Disposition, Offset"
-  response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, Offset, FileName"
-  response.headers["Content-Type"] = "text/plain; charset=utf-8"
+  response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, Offset, Filepath"
+  #response.headers["Content-Type"] = "text/plain; charset=utf-8"
+  puts "Before #{request.path_info}"
 end
 
 
@@ -18,7 +19,8 @@ end
 # todo: add upload client
 get "/files/" do
   #return "hello world".to_sha1
-  haml :upload
+  #haml :upload
+  haml :tus
 end
 
 # Handle OPTION-request (Check if we can upload files)
@@ -35,15 +37,10 @@ end
 # todo: check avaliable drive space
 post "/files/" do
   file_size = request.env["Final-Length"]
-  request_file_name = request.env["FileName"]
-  if request_file_name
-    folders = request_file_name.split("/")
-    folders.pop
-    if folders.size>0
-      FileUtils.makedirs folders.join("/")
-    end
-  end
-  unique_filename = request_file_name || SecureRandom.hex
+
+  request_file_path = request.env["Filepath"]
+  create_path_folders(request_file_path, "uploads")
+  unique_filename = request_file_path || SecureRandom.hex
   path = 'uploads/'+unique_filename
   File.write(path, "")
   response.headers["Location"] = request.url+unique_filename
@@ -65,11 +62,21 @@ end
 patch "/files/*" do
   file_name = params[:splat].join("").to_s
   path = 'uploads/'+file_name
-  data_bytes = request.body
-  File.open(path, "w") do |f|
-    f.write(data_bytes.read)
+  offset = env['Offset']
+  begin
+    f = File.open(path, "r+b")
+    f.sync = true
+    f.seek(offset) unless offset.nil?
+    f.write(request.body.read)
+    f.close
+  rescue SystemCallError => e
+    raise("My #{e.message}") if e.class.name.start_with?('Errno::')
   end
-  status 200
+  if File.file?(path)
+    status 200
+  elsif
+    status 404
+  end
 end
 
 # Handle OPTIONS-request (Check if file exists)
@@ -81,5 +88,15 @@ head "/files/*" do
     status 200
   elsif
     status 404
+  end
+end
+
+def create_path_folders(path, root_path)
+  if path
+    folders = path.split("/")
+    folders.pop
+    if folders.size>0
+      FileUtils.makedirs root_path+"/"+folders.join("/")
+    end
   end
 end
