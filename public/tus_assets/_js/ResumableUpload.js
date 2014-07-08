@@ -1,19 +1,8 @@
 'use strict';
 
-var ResumableUpload;
-
-var tus = window.tus = {
-    upload: function(file, options) {
-        var upload = new ResumableUpload(file, options);
-        if (file) {
-            upload._start();
-        }
-        return upload;
-    },
-    fingerprint: function(file) {
-        return 'tus-' + file.name + '-' + file.type + '-' + file.size;
-    }
-};
+var PolyResumableUpload, ResumableUpload,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 ResumableUpload = (function() {
     ResumableUpload.SUPPORT = function() {
@@ -25,15 +14,14 @@ ResumableUpload = (function() {
         this.options = {
             endpoint: options.endpoint,
             fingerprint: options.fingerprint,
-            resumable: (options.resumable !== undefined ? options.resetBefore : true),
+            resumable: (options.resumable !== void 0 ? options.resetBefore : true),
             resetBefore: options.resetBefore,
             resetAfter: options.resetAfter,
-            headers: (options.headers !== undefined ? options.headers : {}),
+            headers: (options.headers !== void 0 ? options.headers : {}),
             chunkSize: options.chunkSize,
-            minChunkSize: (options.minChunkSize !== undefined ? options.minChunkSize : 51200),
-            maxChunkSize: (options.maxChunkSize !== undefined ? options.maxChunkSize : 2097152*10)
+            minChunkSize: (options.minChunkSize !== void 0 ? options.minChunkSize : 51200),
+            maxChunkSize: (options.minChunkSize !== void 0 ? options.minChunkSize : 2097152 * 8)
         };
-        this._chunkTimer = -1;
         this.fileUrl = null;
         this.bytesWritten = null;
         this._jqXHR = null;
@@ -55,16 +43,13 @@ ResumableUpload = (function() {
     ResumableUpload.prototype._post = function() {
         var headers, options;
         headers = $.extend({
-            'Final-Length': this.file.size,
-            'File-Type': this.file.type,
-            'File-Name': this.file.name
+            'Final-Length': this.file.size
         }, this.options.headers);
         options = {
             type: 'POST',
             url: this.options.endpoint,
             headers: headers
         };
-
         return $.ajax(options).fail((function(_this) {
             return function(jqXHR, textStatus, errorThrown) {
                 return _this._emitFail("Could not post to file resource " + _this.options.endpoint + ". " + textStatus);
@@ -109,18 +94,6 @@ ResumableUpload = (function() {
         })(this));
     };
 
-    ResumableUpload.prototype._getChunkSize = function() {
-        var chunkSize, diff;
-        if (this._chunkTimer < 0) {
-            chunkSize = this.options.chunkSize = this.options.minChunkSize;
-        } else {
-            diff = (new Date().getTime()) - this._chunkTimer;
-            chunkSize = this.options.chunkSize = Math.round(this.options.chunkSize / diff * 1000);
-        }
-        this._chunkTimer = new Date().getTime();
-        return Math.min(Math.max(this.options.minChunkSize, chunkSize), this.options.maxChunkSize);
-    };
-
     ResumableUpload.prototype._uploadFile = function(range_from) {
         var blob, bytesWrittenAtStart, headers, options, range_to, slice, xhr;
         this.bytesWritten = range_from;
@@ -132,12 +105,9 @@ ResumableUpload = (function() {
         this._emitProgress();
         bytesWrittenAtStart = this.bytesWritten;
         range_to = this.file.size;
-        var chunkSize = this._getChunkSize()
         if (this.options.chunkSize) {
-            range_to = Math.min(range_to, range_from + chunkSize);
+            range_to = Math.min(range_to, range_from + this.options.chunkSize);
         }
-        console.log(chunkSize);
-
         slice = this.file.slice || this.file.webkitSlice || this.file.mozSlice;
         blob = slice.call(this.file, range_from, range_to, this.file.type);
         xhr = $.ajaxSettings.xhr();
@@ -209,7 +179,7 @@ ResumableUpload = (function() {
         var e, fingerPrint, result;
         fingerPrint = this.options.fingerprint;
         if (fingerPrint == null) {
-            fingerPrint = tus.fingerprint(this.file);
+            fingerPrint = this.fingerprint(this.file);
         }
         if (url === false) {
             console.log('Resetting any known cached url for ' + this.file.name);
@@ -234,3 +204,47 @@ ResumableUpload = (function() {
     return ResumableUpload;
 
 })();
+
+PolyResumableUpload = (function(_super) {
+    __extends(PolyResumableUpload, _super);
+
+    function PolyResumableUpload(file, options) {
+        PolyResumableUpload.__super__.constructor.call(this, file, options);
+        this._chunkTimer = -1;
+    }
+
+    PolyResumableUpload.prototype._getChunkSize = function() {
+        var chunkSize, diff;
+        if (this._chunkTimer < 0) {
+            chunkSize = this.options.chunkSize = this.options.minChunkSize;
+        } else {
+            diff = (new Date().getTime()) - this._chunkTimer;
+            chunkSize = this.options.chunkSize = Math.round(this.options.chunkSize / diff * 1000);
+        }
+        this._chunkTimer = new Date().getTime();
+        return Math.min(Math.max(this.options.minChunkSize, chunkSize), this.options.maxChunkSize);
+    };
+
+    PolyResumableUpload.prototype._uploadFile = function(range_from) {
+        if (this.options.chunkSize) {
+            this.options.chunkSize = this._getChunkSize();
+        }
+        return PolyResumableUpload.__super__._uploadFile.call(this, range_from);
+    };
+
+    return PolyResumableUpload;
+
+})(ResumableUpload);
+
+var tus = window.tus = {
+    upload: function(file, options) {
+        var upload = new ResumableUpload(file, options);
+        if (file) {
+            upload._start();
+        }
+        return upload;
+    },
+    fingerprint: function(file) {
+        return 'tus-' + file.name + '-' + file.type + '-' + file.size;
+    }
+};

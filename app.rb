@@ -9,7 +9,7 @@ before do
   response.headers["Access-Control-Allow-Methods"] = "HEAD,GET,PUT,POST,PATCH,DELETE"
   response.headers["Access-Control-Allow-Origin"] = "*"
   response.headers["Access-Control-Expose-Headers"] = "Location, Range, Content-Disposition, Offset"
-  response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, Offset, file-type, file-name"
+  response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-name, file-path, Offset"
   #response.headers["Content-Type"] = "text/plain; charset=utf-8"
 end
 
@@ -38,9 +38,16 @@ post "/files/*" do
   file_name = request.env["HTTP_FILE_NAME"].to_s
   file_type = request.env["HTTP_FILE_TYPE"].to_s
   file_size = request.env["HTTP_FINAL_LENGTH"].to_s
-  unique_filename = "#{file_size}#{file_name}#{file_type}".to_sha1
-  puts "file_size: #{file_size} file_name: #{file_name}  file_type: #{file_type} unique_filename: #{unique_filename}"
-  #unique_filename = SecureRandom.hex
+
+  #puts "file_size: #{file_size} file_name: #{file_name}  file_type: #{file_type} unique_filename: #{unique_filename}"
+
+  unique_filename = SecureRandom.hex
+  if file_name.nil?
+    unique_filename = SecureRandom.hex
+  else
+    unique_filename = "#{file_name}#{file_type}#{file_size}".to_sha1
+  end
+
   path = 'uploads/'+unique_filename
   File.write(path, "")
   response.headers["Location"] = request.url+unique_filename

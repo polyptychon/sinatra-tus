@@ -18,8 +18,6 @@ class ResumableUpload
       minChunkSize: (if options.minChunkSize isnt undefined then options.minChunkSize else 51200)
       maxChunkSize: (if options.minChunkSize isnt undefined then options.minChunkSize else 2097152*8)
 
-    @_chunkTimer = -1
-
     # The url of the uploaded file, assigned by the tus upload endpoint
     @fileUrl = null
 
@@ -89,17 +87,6 @@ class ResumableUpload
         bytesWritten = if parseInt(offset, 10) then offset else 0
         @_uploadFile(bytesWritten);
     )
-  _getChunkSize : ->
-    if (@_chunkTimer < 0)
-      chunkSize = @options.chunkSize = @options.minChunkSize
-    else
-      diff = (new Date().getTime()) - @_chunkTimer
-      chunkSize = @options.chunkSize = Math.round(@options.chunkSize / diff * 1000)
-
-    @_chunkTimer = new Date().getTime()
-
-    return Math.min(Math.max(@options.minChunkSize, chunkSize), @options.maxChunkSize)
-
 
   _uploadFile : (range_from) ->
     @bytesWritten = range_from
@@ -115,10 +102,10 @@ class ResumableUpload
     bytesWrittenAtStart = @bytesWritten;
 
     range_to = @file.size;
-    if (@options.chunkSize)
-      range_to = Math.min(range_to, range_from + @_getChunkSize())
 
-    console.log(Math.min(Math.max(@options.minChunkSize, @options.chunkSize), @options.maxChunkSize))
+    if(@options.chunkSize)
+      range_to = Math.min(range_to, range_from + @options.chunkSize);
+
 
     slice = @file.slice || @file.webkitSlice || @file.mozSlice
     blob  = slice.call(@file, range_from, range_to, @file.type)
@@ -198,3 +185,25 @@ class ResumableUpload
 
   fingerprint: (file) ->
     'tus-' + file.name + '-' + file.type + '-' + file.size;
+
+class PolyResumableUpload extends ResumableUpload
+  constructor: (file, options) ->
+    super(file, options)
+    @_chunkTimer = -1
+
+  _getChunkSize : ->
+    if (@_chunkTimer < 0)
+      chunkSize = @options.chunkSize = @options.minChunkSize
+    else
+      diff = (new Date().getTime()) - @_chunkTimer
+      chunkSize = @options.chunkSize = Math.round(@options.chunkSize / diff * 1000)
+
+    @_chunkTimer = new Date().getTime()
+
+    return Math.min(Math.max(@options.minChunkSize, chunkSize), @options.maxChunkSize)
+
+  _uploadFile : (range_from) ->
+    if (@options.chunkSize)
+      @options.chunkSize = @_getChunkSize()
+
+    super(range_from)
