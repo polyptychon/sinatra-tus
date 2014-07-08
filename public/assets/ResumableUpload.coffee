@@ -10,14 +10,18 @@ class ResumableUpload
     @options =
       endpoint:     options.endpoint
       fingerprint:  options.fingerprint
-      resumable:    (if options.resumable isnt 'undefined' then options.resetBefore else true)
+      resumable:    (if options.resumable isnt undefined then options.resetBefore else true)
       resetBefore:  options.resetBefore
       resetAfter:   options.resetAfter
-      headers:      (if options.headers isnt 'undefined' then options.headers else {})
+      headers:      (if options.headers isnt undefined then options.headers else {})
       chunkSize:    options.chunkSize
+      minChunkSize: (if options.minChunkSize isnt undefined then options.minChunkSize else 51200)
+      maxChunkSize: (if options.minChunkSize isnt undefined then options.minChunkSize else 2097152*8)
+
+    @_chunkTimer = -1
 
     # The url of the uploaded file, assigned by the tus upload endpoint
-    @fileUrl = null;
+    @fileUrl = null
 
     # Bytes sent to the server so far
     @bytesWritten = null
@@ -85,6 +89,17 @@ class ResumableUpload
         bytesWritten = if parseInt(offset, 10) then offset else 0
         @_uploadFile(bytesWritten);
     )
+  _getChunkSize : ->
+    if (@_chunkTimer < 0)
+      chunkSize = @options.chunkSize = @options.minChunkSize
+    else
+      diff = (new Date().getTime()) - @_chunkTimer
+      chunkSize = @options.chunkSize = Math.round(@options.chunkSize / diff * 1000)
+
+    @_chunkTimer = new Date().getTime()
+
+    return Math.min(Math.max(@options.minChunkSize, chunkSize), @options.maxChunkSize)
+
 
   _uploadFile : (range_from) ->
     @bytesWritten = range_from
@@ -101,7 +116,9 @@ class ResumableUpload
 
     range_to = @file.size;
     if (@options.chunkSize)
-      range_to = Math.min(range_to, range_from + @options.chunkSize)
+      range_to = Math.min(range_to, range_from + @_getChunkSize())
+
+    console.log(Math.min(Math.max(@options.minChunkSize, @options.chunkSize), @options.maxChunkSize))
 
     slice = @file.slice || @file.webkitSlice || @file.mozSlice
     blob  = slice.call(@file, range_from, range_to, @file.type)

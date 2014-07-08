@@ -9,7 +9,7 @@ before do
   response.headers["Access-Control-Allow-Methods"] = "HEAD,GET,PUT,POST,PATCH,DELETE"
   response.headers["Access-Control-Allow-Origin"] = "*"
   response.headers["Access-Control-Expose-Headers"] = "Location, Range, Content-Disposition, Offset"
-  response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, Offset, Filepath"
+  response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, Offset, file-type, file-name"
   #response.headers["Content-Type"] = "text/plain; charset=utf-8"
 end
 
@@ -24,7 +24,7 @@ end
 
 # Handle OPTION-request (Check if we can upload files)
 # todo: add security
-options "/files/" do
+options "/files/*" do
   if request.env["Access-Control-Request-Method"]=="POST"
     status 200
   elsif request.env["Access-Control-Request-Method"]=="PATCH"
@@ -34,12 +34,13 @@ end
 
 # Handle POST-request (Create File)
 # todo: check avaliable drive space
-post "/files/" do
-  file_size = request.env["Final-Length"]
-
-  request_file_path = request.env["Filepath"]
-  create_path_folders(request_file_path, "uploads")
-  unique_filename = request_file_path || SecureRandom.hex
+post "/files/*" do
+  file_name = request.env["HTTP_FILE_NAME"].to_s
+  file_type = request.env["HTTP_FILE_TYPE"].to_s
+  file_size = request.env["HTTP_FINAL_LENGTH"].to_s
+  unique_filename = "#{file_size}#{file_name}#{file_type}".to_sha1
+  puts "file_size: #{file_size} file_name: #{file_name}  file_type: #{file_type} unique_filename: #{unique_filename}"
+  #unique_filename = SecureRandom.hex
   path = 'uploads/'+unique_filename
   File.write(path, "")
   response.headers["Location"] = request.url+unique_filename
@@ -52,7 +53,7 @@ options "/files/*" do
   path = 'uploads/'+file_name
   if File.file?(path)
     status 200
-  elsif
+  else
     status 404
   end
 end
@@ -65,7 +66,7 @@ patch "/files/*" do
   begin
     f = File.open(path, "r+b")
     f.sync = true
-    puts "offset: #{offset}"
+    # puts "offset: #{offset}"
     f.seek(offset) unless offset.nil?
     f.write(request.body.read)
     f.close
@@ -74,7 +75,7 @@ patch "/files/*" do
   end
   if File.file?(path)
     status 200
-  elsif
+  else
     status 404
   end
 end
@@ -86,7 +87,7 @@ head "/files/*" do
   if File.file?(path)
     response.headers["Offset"] = File.size(path).to_s
     status 200
-  elsif
+  else
     status 404
   end
 end
