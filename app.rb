@@ -9,22 +9,13 @@ before do
   response.headers["Access-Control-Allow-Methods"] = "HEAD,GET,PUT,POST,PATCH,DELETE"
   response.headers["Access-Control-Allow-Origin"] = "*"
   response.headers["Access-Control-Expose-Headers"] = "Location, Range, Content-Disposition, Offset"
-  response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-name, file-path, Offset"
-  #response.headers["Content-Type"] = "text/plain; charset=utf-8"
+  response.headers["Access-Control-Allow-Headers"] = "Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset"
 end
 
-
-# Handle GET-request (Show the upload form)
-# todo: add upload client
-get "/files/" do
-  #return "hello world".to_sha1
-  #haml :upload
-  haml :tus
-end
 
 # Handle OPTION-request (Check if we can upload files)
 # todo: add security
-options "/files/*" do
+options "/files/" do
   if request.env["Access-Control-Request-Method"]=="POST"
     status 200
   elsif request.env["Access-Control-Request-Method"]=="PATCH"
@@ -32,31 +23,20 @@ options "/files/*" do
   end
 end
 
-# Handle POST-request (Create File)
+# Handle POST-request (Create temporary File)
 # todo: check avaliable drive space
-post "/files/*" do
-  file_name = request.env["HTTP_FILE_NAME"].to_s
-  file_type = request.env["HTTP_FILE_TYPE"].to_s
-  file_size = request.env["HTTP_FINAL_LENGTH"].to_s
-
-  #puts "file_size: #{file_size} file_name: #{file_name}  file_type: #{file_type} unique_filename: #{unique_filename}"
-
-  unique_filename = SecureRandom.hex
-  if file_name.nil?
-    unique_filename = SecureRandom.hex
-  else
-    unique_filename = "#{file_name}#{file_type}#{file_size}".to_sha1
-  end
-
+post "/files/" do
+  unique_filename = "#{SecureRandom.hex}.tmp"
   path = 'uploads/'+unique_filename
+
   File.write(path, "")
   response.headers["Location"] = request.url+unique_filename
   status 201
 end
 
-# Handle OPTIONS-request (Check if file exists)
-options "/files/*" do
-  file_name = params[:splat].join("").to_s
+# Handle OPTIONS-request (Check if temporary file exists)
+options "/files/:name" do
+  file_name = params[:name]
   path = 'uploads/'+file_name
   if File.file?(path)
     status 200
@@ -65,15 +45,14 @@ options "/files/*" do
   end
 end
 
-# Handle PATCH-request (Receive and save the uploaded file)
-patch "/files/*" do
-  file_name = params[:splat].join("").to_s
+# Handle PATCH-request (Receive and save the uploaded file in chunks)
+patch "/files/:name" do
+  file_name = params[:name]
   path = 'uploads/'+file_name
   offset = request.env['HTTP_OFFSET'].to_i
   begin
     f = File.open(path, "r+b")
     f.sync = true
-    # puts "offset: #{offset}"
     f.seek(offset) unless offset.nil?
     f.write(request.body.read)
     f.close
@@ -87,10 +66,11 @@ patch "/files/*" do
   end
 end
 
-# Handle OPTIONS-request (Check if file exists)
-head "/files/*" do
-  file_name = params[:splat].join("").to_s
+# Handle OPTIONS-request (Check if temporary file exists and return offset)
+head "/files/:name" do
+  file_name = params[:name]
   path = 'uploads/'+file_name
+
   if File.file?(path)
     response.headers["Offset"] = File.size(path).to_s
     status 200
@@ -99,12 +79,39 @@ head "/files/*" do
   end
 end
 
-def create_path_folders(path, root_path)
-  if path
+# Handle OPTIONS-request (Check if file exists)
+head "/files/" do
+  file_path = request.env['HTTP_FILE_PATH'].to_s
+  path = 'uploads/'+file_path
+
+  if File.file?(path)
+    status 200
+  else
+    status 404
+  end
+end
+
+# Handle PUT-request (Move and rename temporary file)
+put "/files/:name" do
+  file_name = params[:name]
+  file_path = request.env['HTTP_FILE_PATH'].to_s
+
+  begin
+    create_path_folders(file_path, 'uploads', file_name)
+  rescue
+    halt 404
+  end
+
+  status 200
+end
+
+def create_path_folders(path, upload_path, file_name)
+  unless path.nil?
     folders = path.split("/")
     folders.pop
     if folders.size>0
-      FileUtils.makedirs root_path+"/"+folders.join("/")
+      FileUtils.makedirs upload_path+'/'+folders.join('/')
     end
+    FileUtils.mv(upload_path+'/'+file_name, upload_path+'/'+path)
   end
 end
