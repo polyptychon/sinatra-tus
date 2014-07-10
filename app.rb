@@ -20,7 +20,7 @@ options "/files/" do
   if request.env['Access-Control-Request-Method']=='POST'
     status 200
   elsif request.env['Access-Control-Request-Method']=='PATCH'
-    status 404
+    status 405
   end
 end
 
