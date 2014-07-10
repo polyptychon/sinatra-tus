@@ -106,7 +106,7 @@ put "/files/:name" do
     halt 404
   end
   response.headers['Checksum'] = Digest::MD5.file(UPLOAD_FOLDER+'/'+file_path).hexdigest.to_s
-  response.headers['Location'] = file_path
+  response.headers['Location'] = 'files/'+file_path
   status 200
 end
 
