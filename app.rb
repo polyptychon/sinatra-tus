@@ -8,8 +8,8 @@ require 'rickshaw'
 before do
   response.headers['Access-Control-Allow-Methods'] = 'HEAD,GET,PUT,POST,PATCH,DELETE'
   response.headers['Access-Control-Allow-Origin'] = '*'
-  response.headers['Access-Control-Expose-Headers'] = 'Location, Range, Content-Disposition, Offset'
-  response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Checksum, Offset'
+  response.headers['Access-Control-Expose-Headers'] = 'Location, Range, Content-Disposition, Offset, Checksum'
+  response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset'
 end
 
 UPLOAD_FOLDER = 'uploads'
@@ -105,9 +105,9 @@ put "/files/:name" do
     FileUtils.rm(UPLOAD_FOLDER+'/'+temp_file_name)
     halt 404
   end
+  response.headers['Checksum'] = Digest::MD5.file(UPLOAD_FOLDER+'/'+file_path).hexdigest.to_s
   response.headers['Location'] = file_path
   status 200
-  Digest::MD5.file(UPLOAD_FOLDER+'/'+file_path).hexdigest.to_s
 end
 
 def move_file(path, temp_file_name)
