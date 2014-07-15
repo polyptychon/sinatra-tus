@@ -4,6 +4,7 @@ require 'haml'
 require 'fileutils'
 require 'securerandom'
 require 'rickshaw'
+require 'active_support/inflector'
 
 before do
   response.headers['Access-Control-Allow-Methods'] = 'HEAD,GET,PUT,POST,PATCH,DELETE'
@@ -85,6 +86,7 @@ end
 # Handle OPTIONS-request (Check if file exists)
 head "/files/" do
   file_path = request.env['HTTP_FILE_PATH'].to_s
+  file_path = friendly_name(file_path)
   path = UPLOAD_FOLDER+'/'+file_path
 
   if File.file?(path)
@@ -100,24 +102,31 @@ put "/files/:name" do
   file_path = request.env['HTTP_FILE_PATH'].to_s
 
   begin
-    move_file(file_path, temp_file_name)
+    file_path = move_file(file_path, temp_file_name)
   rescue
     FileUtils.rm(UPLOAD_FOLDER+'/'+temp_file_name)
     halt 404
   end
-  response.headers['Checksum'] = Digest::MD5.file(UPLOAD_FOLDER+'/'+file_path).hexdigest.to_s
-  puts file_path
+  response.headers['Checksum'] = Digest::MD5.file(file_path).hexdigest.to_s
   response.headers['Location'] = '/files/'+file_path
   status 200
 end
 
 def move_file(path, temp_file_name)
   unless path.nil?
+    path = friendly_name(path)
     folders = path.split('/')
     folders.pop
     if folders.size>0
       FileUtils.makedirs UPLOAD_FOLDER+'/'+folders.join('/')
     end
     FileUtils.mv(UPLOAD_FOLDER+'/'+temp_file_name, UPLOAD_FOLDER+'/'+path)
+    UPLOAD_FOLDER+'/'+path
   end
+end
+
+def friendly_name(path)
+  str = path.split('.')
+  extension = str.pop
+  path = str.join('.').parameterize+'.'+extension
 end
