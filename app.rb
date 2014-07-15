@@ -128,5 +128,5 @@ end
 def friendly_name(path)
   str = path.split('.')
   extension = str.pop
-  path = str.join('.').parameterize+'.'+extension
+  str.join('.').parameterize+'.'+extension
 end
