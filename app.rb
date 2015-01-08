@@ -6,6 +6,9 @@ require 'securerandom'
 require 'rickshaw'
 require 'active_support/inflector'
 
+set :bind, '0.0.0.0'
+set :port, 1080
+
 before do
   response.headers['Access-Control-Allow-Methods'] = 'HEAD,GET,PUT,POST,PATCH,DELETE'
   response.headers['Access-Control-Allow-Origin'] = '*'
