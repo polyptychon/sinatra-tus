@@ -1,4 +1,5 @@
 require 'rubygems'
+require 'json'
 require_relative 'tusd'
 # require 'haml'
 # require 'fileutils'
@@ -8,6 +9,34 @@ require_relative 'tusd'
 
 
 class PolyTusd < Tusd
+
+
+  # Handle OPTIONS-request (Check if file exists)
+  get route_path("/info") do
+    # file_path = request.env['HTTP_FILE_PATH'].to_s
+    # file_path = friendly_name(file_path)
+    # path = UPLOAD_FOLDER+'/'+file_path
+
+    return params[:filenames].inspect
+
+    result = {}
+
+    filenames = Array(params[:filenames])
+    filenames.each do |path|
+      system_path = file_path(path)
+      if File.file?(path)
+        result[path] = File.size(system_path).to_s
+      else
+        result[path] = :not_found
+      end
+    end
+
+    content_type :json
+    result.to_json
+  end
+
+
+
 
   before do
     response.headers['Access-Control-Allow-Methods'] = 'HEAD,GET,PUT,POST,PATCH,DELETE'
