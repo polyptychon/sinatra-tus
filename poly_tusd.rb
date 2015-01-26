@@ -1,15 +1,32 @@
-require 'rubygems'
 require 'json'
+require 'active_support/inflector'
 require_relative 'tusd'
-# require 'haml'
-# require 'fileutils'
-# require 'securerandom'
-# require 'rickshaw'
-# require 'active_support/inflector'
-
 
 class PolyTusd < Tusd
 
+  helpers do
+    def move_file(path, temp_file_name)
+      unless path.nil?
+        path = friendly_name(path)
+        folders = path.split('/')
+        folders.pop
+        if folders.size>0
+          folders_path = file_path(folders.join('/'))
+          FileUtils.makedirs folders_path
+        end
+        tmp_path = file_path(temp_file_name)
+        path = file_path(path)
+        FileUtils.mv(tmp_path, path)
+        path
+      end
+    end
+
+    def friendly_name(path)
+      str = path.split('.')
+      extension = str.pop
+      str.join('.').parameterize+'.'+extension
+    end
+  end
 
   # Handle OPTIONS-request (Check if file exists)
   get route_path("/info") do
@@ -35,54 +52,7 @@ class PolyTusd < Tusd
     result.to_json
   end
 
-
-
-
-  before do
-    response.headers['Access-Control-Allow-Methods'] = 'HEAD,GET,PUT,POST,PATCH,DELETE'
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Expose-Headers'] = 'Location, Range, Content-Disposition, Offset, Checksum'
-    response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset'
-  end
-
-  UPLOAD_FOLDER = 'uploads'
-
-  # Handle OPTION-request (Check if we can upload files)
-  # todo: add security
-  options route_path("/?") do
-    if request.env['Access-Control-Request-Method']=='POST'
-      status 200
-    elsif request.env['Access-Control-Request-Method']=='PATCH'
-      status 405
-    end
-  end
-
-  # Handle OPTIONS-request (Check if temporary file exists)
-  options route_path("/:name") do
-    temp_file_name = params[:name]
-    path = UPLOAD_FOLDER+'/'+temp_file_name
-    if File.file?(path)
-      status 200
-    else
-      status 404
-    end
-  end
-
-  # Extend TUS Protocol
-
-  # Handle OPTIONS-request (Check if file exists)
-  head route_path("/?") do
-    file_path = request.env['HTTP_FILE_PATH'].to_s
-    file_path = friendly_name(file_path)
-    path = UPLOAD_FOLDER+'/'+file_path
-
-    if File.file?(path)
-      status 200
-    else
-      status 404
-    end
-  end
-
+  # TODO: REMOVE THIS FROM HERE AND CLIENT
   # Handle PUT-request (Move and rename temporary file)
   put route_path("/:name") do
     temp_file_name = params[:name]
@@ -91,7 +61,8 @@ class PolyTusd < Tusd
     begin
       file_path = move_file(file_path, temp_file_name)
     rescue
-      FileUtils.rm(UPLOAD_FOLDER+'/'+temp_file_name)
+      tmp_path = file_path(temp_file_name)
+      FileUtils.rm(tmp_path)
       halt 404
     end
     response.headers['Checksum'] = Digest::MD5.file(file_path).hexdigest.to_s
@@ -99,23 +70,40 @@ class PolyTusd < Tusd
     status 200
   end
 
-  def move_file(path, temp_file_name)
-    unless path.nil?
-      path = friendly_name(path)
-      folders = path.split('/')
-      folders.pop
-      if folders.size>0
-        FileUtils.makedirs UPLOAD_FOLDER+'/'+folders.join('/')
-      end
-      FileUtils.mv(UPLOAD_FOLDER+'/'+temp_file_name, UPLOAD_FOLDER+'/'+path)
-      UPLOAD_FOLDER+'/'+path
+  # TODO: REMOVE THIS FROM HERE AND CLIENT
+  # Handle OPTION-request (Check if we can upload files)
+  options route_path("/?") do
+    if request.env['Access-Control-Request-Method']=='POST'
+      status 200
+    elsif request.env['Access-Control-Request-Method']=='PATCH'
+      status 405
     end
   end
 
-  def friendly_name(path)
-    str = path.split('.')
-    extension = str.pop
-    str.join('.').parameterize+'.'+extension
+  # TODO: REMOVE THIS FROM HERE AND CLIENT
+  # Handle OPTIONS-request (Check if temporary file exists)
+  options route_path("/:name") do
+    temp_file_name = params[:name]
+    path = file_path(temp_file_name)
+    if File.file?(path)
+      status 200
+    else
+      status 404
+    end
+  end
+
+  # TODO: REMOVE THIS FROM HERE AND CLIENT
+  # Handle OPTIONS-request (Check if file exists)
+  head route_path("/?") do
+    file_path = request.env['HTTP_FILE_PATH'].to_s
+    file_path = friendly_name(file_path)
+    path = file_path(file_path)
+
+    if File.file?(path)
+      status 200
+    else
+      status 404
+    end
   end
 
 end
