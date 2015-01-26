@@ -37,7 +37,7 @@ class Tusd < Sinatra::Base
       [base_url, path].join('/')
     end
 
-    def file_path(filename)
+    def temp_file_path(filename)
       File.expand_path("#{filename}.tmp",settings.upload_folder)
     end
   end
@@ -52,8 +52,8 @@ class Tusd < Sinatra::Base
   # Handle HEAD-request (Check if temporary file exists and return offset)
   head route_path("/:name") do
     temp_file_name = params[:name]
-    path = file_path(temp_file_name)
-    puts "Searching fo #{path}"
+    path = temp_file_path(temp_file_name)
+    puts "Searching for #{path}"
 
     if File.file?(path)
       response.headers['Offset'] = File.size(path).to_s
@@ -66,7 +66,7 @@ class Tusd < Sinatra::Base
   # Handle PATCH-request (Receive and save the uploaded file in chunks)
   patch route_path("/:name") do
     temp_file_name = params[:name]
-    path = file_path(temp_file_name)
+    path = temp_file_path(temp_file_name)
     offset = request.env['HTTP_OFFSET'].to_i
 
     # Guard : If file not found return 404
@@ -92,17 +92,12 @@ class Tusd < Sinatra::Base
   # Handle POST-request (Create temporary File)
   post route_path("/?") do
     unique_filename = "#{SecureRandom.hex}"
-    path = file_path(unique_filename)
+    path = temp_file_path(unique_filename)
 
     File.write(path, '')
     # response.headers['Location'] = request.url + unique_filename
     response.headers['Location'] = file_url(unique_filename)
     status 201
-  end
-
-  # for testing purposes
-  get route_path("/?") do
-    "Hello"
   end
 
   # Generates a new (subclass) Class so that we can change the settings in a block
