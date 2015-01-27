@@ -7,32 +7,21 @@ GEM
       minitest (~> 5.1)
       thread_safe (~> 0.1)
       tzinfo (~> 1.1)
-    colored (1.2)
-    ffi (1.9.3)
-    free_disk_space (1.0.0)
-      sys-filesystem
-    gemrat (0.4.6)
-      colored (= 1.2)
-    haml (4.0.5)
-      tilt
-    i18n (0.6.11)
-    json (1.8.1)
-    minitest (5.4.0)
+    i18n (0.7.0)
+    json (1.8.2)
+    minitest (5.5.1)
     rack (1.5.2)
     rack-protection (1.5.3)
       rack
-    rickshaw (0.0.2)
     shotgun (0.9)
       rack (>= 1.0)
     sinatra (1.4.5)
       rack (~> 1.4)
       rack-protection (~> 1.4)
       tilt (~> 1.3, >= 1.3.4)
-    sys-filesystem (1.1.2)
-      ffi
     thread_safe (0.3.4)
     tilt (1.4.1)
-    tzinfo (1.2.1)
+    tzinfo (1.2.2)
       thread_safe (~> 0.1)
 
 PLATFORMS
@@ -40,9 +29,5 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport (= 4.1.4)
-  free_disk_space (= 1.0.0)
-  gemrat
-  haml (~> 4.0.3)
-  rickshaw (= 0.0.2)
   shotgun (~> 0.9)
   sinatra (~> 1.4.5)
