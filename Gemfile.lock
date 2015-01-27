@@ -11,6 +11,8 @@ GEM
     json (1.8.2)
     minitest (5.5.1)
     rack (1.5.2)
+    rack-parser (0.6.1)
+      rack
     rack-protection (1.5.3)
       rack
     shotgun (0.9)
@@ -29,5 +31,6 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport (= 4.1.4)
+  rack-parser (~> 0.6.1)
   shotgun (~> 0.9)
   sinatra (~> 1.4.5)

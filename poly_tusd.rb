@@ -1,8 +1,13 @@
 require 'json'
 require 'active_support/inflector'
+require 'rack/parser'
 require_relative 'tusd'
 
 class PolyTusd < Tusd
+
+  use Rack::Parser, :content_types => {
+    'application/json'  => Proc.new { |body| ::MultiJson.decode body }
+  }
 
   helpers do
     def file_path(filename)
