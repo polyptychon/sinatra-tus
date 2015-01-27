@@ -75,22 +75,25 @@ class PolyTusd < Tusd
     filenames = Array(params[:filenames])
 
     # 2. Perform work
-    result = {}
+    result = []
     filenames.each do |path|
       path.sub!(/^\//, "") if path.start_with?("/") # Remove forward "/" from file path if exists
       path = friendly_name(path) # ust check with the friendly name
       system_path = file_path(path)
 
+      file_info = { :name => path }
       if File.file?(system_path)
-        result[path] = File.size(system_path).to_s
+        file_info[:status] = :found
+        file_info[:size] = File.size(system_path)
       else
-        result[path] = :not_found
+        file_info[:status] = :not_found
       end
+      result << file_info
     end
 
     # 3. Return result
     content_type :json
-    result.to_json
+    { :results => result}.to_json
   end
 
   # Handle GET-request (return the file)
