@@ -49,6 +49,28 @@ class Tusd < Sinatra::Base
     response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset'
   end
 
+  # Handle OPTIONS-request (JQuery cross-domain limitation. For some reason always sends options if it is not the same domain)
+  options route_path("/?") do
+    if request.env['Access-Control-Request-Method']=='POST'
+      status 200
+    elsif request.env['Access-Control-Request-Method']=='PATCH'
+      status 405
+    end
+  end
+  # Handle OPTIONS-request (JQuery cross-domain limitation. For some reason always sends options if it is not the same domain)
+  options route_path("/:name") do
+    temp_file_name = params[:name]
+    path = temp_file_path(temp_file_name)
+    puts "Searching for #{path}"
+
+    if File.file?(path)
+      response.headers['Offset'] = File.size(path).to_s
+      status 200
+    else
+      status 404
+    end
+  end
+
   # Handle HEAD-request (Check if temporary file exists and return offset)
   head route_path("/:name") do
     temp_file_name = params[:name]
