@@ -5,10 +5,6 @@ require_relative 'tusd'
 
 class PolyTusd < Tusd
 
-  use Rack::Parser, :content_types => {
-    'application/json'  => Proc.new { |body| ::MultiJson.decode body }
-  }
-
   helpers do
     def file_path(filename)
       File.expand_path("#{filename}",settings.upload_folder)
@@ -38,7 +34,7 @@ class PolyTusd < Tusd
     end
 
     def moved_file_url(path='')
-      file_url(path)
+      file_url("final/#{path}")
     end
 
     def move_and_return_url(temp_file_name, file_path)
@@ -57,12 +53,31 @@ class PolyTusd < Tusd
       response.headers['Checksum'] = Digest::MD5.file(new_file_path).hexdigest.to_s
       response.headers['Location'] = moved_file_url(file_path)
       status 201
-
     # 4. Handle Errors
     rescue Exception => exc
       halt 500, exc.to_s
     end
+
+    def check_file(path)
+      path.sub!(/^\//, "") if path.start_with?("/") # Remove forward "/" from file path if exists
+      path = friendly_name(path) # ust check with the friendly name
+      system_path = file_path(path)
+
+      file_info = { :name => path }
+      if File.file?(system_path)
+        file_info[:status] = :found
+        file_info[:size] = File.size(system_path)
+      else
+        file_info[:status] = :not_found
+      end
+
+      file_info
+    end
   end
+
+  use Rack::Parser, :content_types => {
+    'application/json'  => Proc.new { |body| ::MultiJson.decode body }
+  }
 
   # Handle POST-request (Move and rename temporary file)
   post route_path("/:name/move") do
@@ -82,17 +97,7 @@ class PolyTusd < Tusd
     # 2. Perform work
     result = []
     filenames.each do |path|
-      path.sub!(/^\//, "") if path.start_with?("/") # Remove forward "/" from file path if exists
-      path = friendly_name(path) # ust check with the friendly name
-      system_path = file_path(path)
-
-      file_info = { :name => path }
-      if File.file?(system_path)
-        file_info[:status] = :found
-        file_info[:size] = File.size(system_path)
-      else
-        file_info[:status] = :not_found
-      end
+      file_info = check_file(path)
       result << file_info
     end
 
@@ -102,7 +107,7 @@ class PolyTusd < Tusd
   end
 
   # Handle GET-request (return the file)
-  get route_path("/:name") do
+  get route_path("/final/:name") do
     # 1. Collect input
     file_name = params[:name]
     path = file_path(file_name)

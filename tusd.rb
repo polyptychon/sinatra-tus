@@ -1,6 +1,6 @@
-require 'rubygems'
 require 'sinatra/base'
 require 'securerandom'
+require_relative 'tusd_cors'
 
 class Tusd < Sinatra::Base
 
@@ -40,27 +40,26 @@ class Tusd < Sinatra::Base
     def temp_file_path(filename)
       File.expand_path("#{filename}.tmp",settings.upload_folder)
     end
+
+    def head_and_return_offset(temp_file_name)
+      path = temp_file_path(temp_file_name)
+      puts "Searching for #{path}"
+
+      if File.file?(path)
+        response.headers['Offset'] = File.size(path).to_s
+        status 200
+      else
+        status 404
+      end
+    end
   end
 
-  before do
-    response.headers['Access-Control-Allow-Methods'] = 'HEAD,GET,PUT,POST,PATCH,DELETE'
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Expose-Headers'] = 'Location, Range, Content-Disposition, Offset, Checksum'
-    response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset'
-  end
+  use TusdCORS
 
   # Handle HEAD-request (Check if temporary file exists and return offset)
   head route_path("/:name") do
     temp_file_name = params[:name]
-    path = temp_file_path(temp_file_name)
-    puts "Searching for #{path}"
-
-    if File.file?(path)
-      response.headers['Offset'] = File.size(path).to_s
-      status 200
-    else
-      status 404
-    end
+    head_and_return_offset(temp_file_name)
   end
 
   # Handle PATCH-request (Receive and save the uploaded file in chunks)
