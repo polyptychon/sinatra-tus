@@ -56,6 +56,10 @@ class Tusd < Sinatra::Base
 
   use TusdCORS
 
+  before do
+    content_type :json
+  end
+
   # Handle HEAD-request (Check if temporary file exists and return offset)
   head route_path("/:name") do
     temp_file_name = params[:name]
