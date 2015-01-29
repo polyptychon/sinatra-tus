@@ -12,7 +12,7 @@ class PolyTusd < Tusd
 
     def move_file(path, temp_file_name)
       # 2. Perform Work
-      path = friendly_name(path)
+      # path = friendly_name(path)
       folders = path.split('/')
       folders.pop
       if folders.size>0
@@ -47,6 +47,7 @@ class PolyTusd < Tusd
       file_path.sub!(/^\//, "") if file_path.start_with?("/")
 
       # 2. Perform Work
+      file_path = friendly_name(file_path)
       new_file_path = move_file(file_path, temp_file_name)
 
       # 3. Return result
