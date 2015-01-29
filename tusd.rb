@@ -96,6 +96,10 @@ class Tusd < Sinatra::Base
   # Handle POST-request (Create temporary File)
   post route_path("/?") do
     # 1. Collect input
+    entity_length = request.env["HTTP_ENTITY_LENGTH"]
+    # Guard : If Entity-Length header not found return 400
+    halt 400, "'Entity-Length' header must be sent" unless entity_length
+
     unique_filename = "#{SecureRandom.hex}"
     path = temp_file_path(unique_filename)
 
