@@ -1,9 +1,6 @@
-require 'rubygems'
 require 'sinatra'
-require 'haml'
 require 'fileutils'
 require 'securerandom'
-require 'rickshaw'
 require 'active_support/inflector'
 
 set :bind, '0.0.0.0'
