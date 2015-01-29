@@ -58,43 +58,51 @@ class Tusd < Sinatra::Base
 
   # Handle HEAD-request (Check if temporary file exists and return offset)
   head route_path("/:name") do
+    # 1. Collect input
     temp_file_name = params[:name]
+
+    # 2. Perform Work - 3. Return result
     head_and_return_offset(temp_file_name)
   end
 
   # Handle PATCH-request (Receive and save the uploaded file in chunks)
   patch route_path("/:name") do
-    temp_file_name = params[:name]
-    path = temp_file_path(temp_file_name)
-    offset = request.env['HTTP_OFFSET'].to_i
-
-    # Guard : If file not found return 404
-    return status 404 unless File.file?(path)
-
     begin
+      # 1. Collect input
+      temp_file_name = params[:name]
+      path = temp_file_path(temp_file_name)
+      offset = request.env['HTTP_OFFSET'].to_i
+
+      # Guard : If file not found return 404
+      return status 404 unless File.file?(path)
+
+      # 2. Perform Work
       f = File.open(path, 'r+b')
       f.sync = true
       f.seek(offset) unless offset.nil?
       f.write(request.body.read)
       f.close
+
+      # 3. Return result
+      status 200
+
+    # 4. Handle Errors
     rescue SystemCallError => e
       raise("My #{e.message}") if e.class.name.start_with?('Errno::')
-    end
-    if File.file?(path)
-      status 200
-    else
-      status 404
     end
   end
 
   ## Tus Extension : Create File
   # Handle POST-request (Create temporary File)
   post route_path("/?") do
+    # 1. Collect input
     unique_filename = "#{SecureRandom.hex}"
     path = temp_file_path(unique_filename)
 
+    # 2. Perform Work
     File.write(path, '')
-    # response.headers['Location'] = request.url + unique_filename
+
+    # 3. Return result
     response.headers['Location'] = file_url(unique_filename)
     status 201
   end

@@ -34,29 +34,21 @@ Poly EXTENSION : When MOVING (renaming a file)
 
 ### 1. Create File (unique name from server)
 
+The `Entity-Length` header indicates the final size of a new entity in bytes. This way a server will implicitly know when a file has completed uploading.
+**The value MUST be a non-negative integer.**
+
 Request:
 ```
 POST /files/ HTTP/1.1
 Host: localhost:1080
-Content-Type: application/json
-
+Content-Length: 0
+Entity-Length: 100
 ```
 
 Response:
 ```
 HTTP/1.1 201 Created
-Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset
-Access-Control-Allow-Methods: HEAD,GET,PUT,POST,PATCH,DELETE
-Access-Control-Allow-Origin: *
-Access-Control-Expose-Headers: Location, Range, Content-Disposition, Offset, Checksum
-Connection: Keep-Alive
-Content-Length: 0
-Content-Type: application/json
-Date: Wed, 28 Jan 2015 10:36:15 GMT
 Location: http://localhost:1080/files/44ff8be6aea80498bbe2c6c7e3d6ba40
-Server: WEBrick/1.3.1 (Ruby/2.0.0/2014-05-08)
-X-Content-Type-Options: nosniff
-
 ```
 
 You use the `Location` header to issue the next HEAD/PATCH request
@@ -97,6 +89,8 @@ HTTP/1.1 200 Ok
 
 ### POST /check
 
+Must pass 1 mandatory parameter `filenames` and 1 optional parameter `checksum` if you want it to also return the checksum.
+
 
 #### Request With JSON
 
@@ -105,7 +99,7 @@ POST /files/check HTTP/1.1
 Host: localhost:1080
 Content-Type: application/json
 
-{ "filenames" : [ "img_5451.jpg" ,"unknown.jpg" ] }
+{ "filenames" : [ "img_5451.jpg" ,"unknown.jpg" ], "checksum" : true }
 ```
 
 #### Request With x-www-form-urlencoded
@@ -115,25 +109,29 @@ POST /files/check HTTP/1.1
 Host: localhost:1080
 Content-Type: application/x-www-form-urlencoded
 
-filenames%5B%5D=img_5451.jpg&filenames%5B%5D=unknown.jpg
+filenames%5B%5D=img_5451.jpg&filenames%5B%5D=unknown.jpg&checksum=true
 ```
 
-#### Response (in both cases)
+#### Response (in both cases) NO CHECKSUM
 
 ```
 HTTP/1.1 200 OK
-Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset
-Access-Control-Allow-Methods: HEAD,GET,PUT,POST,PATCH,DELETE
-Access-Control-Allow-Origin: *
-Access-Control-Expose-Headers: Location, Range, Content-Disposition, Offset, Checksum
-Connection: Keep-Alive
-Content-Length: 112
+Content-Length: 219
 Content-Type: application/json
-Date: Tue, 27 Jan 2015 18:02:53 GMT
-X-Content-Type-Options: nosniff
 
-{"results":[{"name":"img_5451.jpg","status":"found","size":901264},{"name":"unknown.jpg","status":"not_found"}]}
+{"results":[{"name":"img_5451.jpg","friendly_name":"img_5451.jpg","status":"found","size":901264},{"name":"unknown.jpg","friendly_name":"unknown.jpg","status":"not_found"}]}
 ```
+
+#### Response (in both cases) WITH CHECKSUM
+
+```
+HTTP/1.1 200 OK
+Content-Length: 219
+Content-Type: application/json
+
+{"results":[{"name":"img_5451.jpg","friendly_name":"img_5451.jpg","status":"found","size":901264,"checksum":"da37a80437d9d27ae87e00c70e4744b4"},{"name":"unknown.jpg","friendly_name":"unknown.jpg","status":"not_found"}]}
+```
+
 
 The results will be like the following
 
@@ -143,7 +141,8 @@ The results will be like the following
     {
       "name": "img_5451.jpg",
       "status": "found",
-      "size": 901264
+      "size": 901264,
+      "checksum": "da37a80437d9d27ae87e00c70e4744b4"
     },
     {
       "name": "unknown.jpg",
@@ -155,18 +154,18 @@ The results will be like the following
 
 ### POST /{temp_file_name}/move
 
+Must pass 1 mandatory parameter `path` and 1 optional parameter `checksum` if you want it to also return the checksum.
+
+
 #### Request With JSON
 
 Request:
 ```
 POST /files/218fbf7e66ebc8a4eba684ef51d716c5/move HTTP/1.1
 Host: localhost:1080
-Authorization: Basic ZGFqaWFAcG9seXB0eWNob24uZ3I6RkB0Y0B0MTIz
 Content-Type: application/json
-Cache-Control: no-cache
-Postman-Token: 20a952b1-f70a-f90b-48b0-a024bb774330
 
-{ "path" : "test.img"}
+{ "path" : "test.img", "checksum" : true}
 ```
 
 #### Request With x-www-form-urlencoded
@@ -177,21 +176,23 @@ POST /files/44ff8be6aea80498bbe2c6c7e3d6ba40/move HTTP/1.1
 Host: localhost:1080
 Content-Type: application/x-www-form-urlencoded
 
-path=test.img
+path=test.img&checksum=true
 ```
 
-#### Response (in both cases)
+#### Response (in both cases) NO CHECKSUM
 
 ```
 HTTP/1.1 201 Created
-Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset
-Access-Control-Allow-Methods: HEAD,GET,PUT,POST,PATCH,DELETE
-Access-Control-Allow-Origin: *
-Access-Control-Expose-Headers: Location, Range, Content-Disposition, Offset, Checksum
-Connection: Keep-Alive
 Content-Length: 0
-Content-Type: application/json
-Date: Tue, 27 Jan 2015 18:02:53 GMT
-X-Content-Type-Options: nosniff
+Location: http://localhost:1080/files/final/test.img
+```
 
+
+#### Response (in both cases) WITH CHECKSUM
+
+```
+HTTP/1.1 201 Created
+Content-Length: 0
+Checksum: d41d8cd98f00b204e9800998ecf8427e
+Location: http://localhost:1080/files/final/test.img
 ```

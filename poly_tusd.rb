@@ -37,7 +37,7 @@ class PolyTusd < Tusd
       file_url("final/#{path}")
     end
 
-    def move_and_return_url(temp_file_name, file_path)
+    def move_and_return_url(temp_file_name, file_path, with_checksum = false)
       # 1. Collect input
       # Guard : If file_path param not found return 400
       halt 400, "'path' param must be sent" unless file_path
@@ -51,15 +51,15 @@ class PolyTusd < Tusd
       new_file_path = move_file(file_path, temp_file_name)
 
       # 3. Return result
-      response.headers['Checksum'] = Digest::MD5.file(new_file_path).hexdigest.to_s
       response.headers['Location'] = moved_file_url(file_path)
+      response.headers['Checksum'] = Digest::MD5.file(new_file_path).hexdigest.to_s if with_checksum
       status 201
     # 4. Handle Errors
     rescue Exception => exc
       halt 500, exc.to_s
     end
 
-    def check_file(original_path)
+    def check_file(original_path, with_checksum = false)
       path = original_path
       path.sub!(/^\//, "") if path.start_with?("/") # Remove forward "/" from file path if exists
       path = friendly_name(path) # ust check with the friendly name
@@ -69,6 +69,7 @@ class PolyTusd < Tusd
       if File.file?(system_path)
         file_info[:status] = :found
         file_info[:size] = File.size(system_path)
+        file_info[:checksum] = Digest::MD5.file(system_path).hexdigest.to_s if with_checksum
       else
         file_info[:status] = :not_found
       end
@@ -86,20 +87,22 @@ class PolyTusd < Tusd
     # 1. Collect input
     temp_file_name = params[:name]
     file_path = params[:path]
+    with_checksum = params[:checksum]
 
     # 2+3.Perform Work and Return result
-    move_and_return_url(temp_file_name, file_path)
+    move_and_return_url(temp_file_name, file_path, with_checksum)
   end
 
   # Handle POST-request (Check if files exist)
   post route_path("/check") do
     # 1. Collect input
     filenames = Array(params[:filenames])
+    with_checksum = params[:checksum]
 
     # 2. Perform work
     result = []
     filenames.each do |path|
-      file_info = check_file(path)
+      file_info = check_file(path, with_checksum)
       result << file_info
     end
 
