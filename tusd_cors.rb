@@ -6,7 +6,7 @@ class TusdCORS < Sinatra::Base
     response.headers['Access-Control-Allow-Methods'] = 'HEAD,GET,PUT,POST,PATCH,DELETE'
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Expose-Headers'] = 'Location, Range, Content-Disposition, Offset, Checksum'
-    response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Final-Length, file-type, file-path, file-checksum, Offset'
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Content-Disposition, Entity-Length, file-type, file-path, file-checksum, Offset'
   end
 
   options "/*" do
