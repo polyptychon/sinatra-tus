@@ -89,7 +89,7 @@ HTTP/1.1 200 Ok
 
 ### POST /check
 
-Must pass 1 mandatory parameter `filenames` and 1 optional parameter `checksum` if you want it to also return the checksum.
+Must pass 1 mandatory parameter `filenames` and 1 optional parameter `checksum` if you want it to also return the (MD5) checksum.
 
 
 #### Request With JSON
@@ -154,7 +154,7 @@ The results will be like the following
 
 ### POST /{temp_file_name}/move
 
-Must pass 1 mandatory parameter `path` and 1 optional parameter `checksum` if you want it to also return the checksum.
+Must pass 1 mandatory parameter `path` and 1 optional parameter `checksum` if you want it to also return the (MD5) checksum.
 
 
 #### Request With JSON
