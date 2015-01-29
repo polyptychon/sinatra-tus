@@ -59,12 +59,13 @@ class PolyTusd < Tusd
       halt 500, exc.to_s
     end
 
-    def check_file(path)
+    def check_file(original_path)
+      path = original_path
       path.sub!(/^\//, "") if path.start_with?("/") # Remove forward "/" from file path if exists
       path = friendly_name(path) # ust check with the friendly name
       system_path = file_path(path)
 
-      file_info = { :name => path }
+      file_info = { :name => original_path, :friendly_name => path }
       if File.file?(system_path)
         file_info[:status] = :found
         file_info[:size] = File.size(system_path)
